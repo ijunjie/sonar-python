@@ -83,6 +83,7 @@ public class FunctionSymbolTest {
     assertThat(functionSymbol.parameters().get(0).name()).isNull();
     assertThat(functionSymbol.parameters().get(0).hasDefaultValue()).isFalse();
     assertThat(functionSymbol.parameters().get(0).isKeywordOnly()).isFalse();
+    assertThat(functionSymbol.parameters().get(0).isVariadic()).isFalse();
 
     functionSymbol = functionSymbol("def fn(p1: int): pass");
     assertThat(functionSymbol.parameters().get(0).declaredType().canOnlyBe("int")).isTrue();
@@ -93,6 +94,7 @@ public class FunctionSymbolTest {
     assertThat(functionSymbol.parameters().get(0).name()).isEqualTo("kwargs");
     assertThat(functionSymbol.parameters().get(0).hasDefaultValue()).isFalse();
     assertThat(functionSymbol.parameters().get(0).isKeywordOnly()).isFalse();
+    assertThat(functionSymbol.parameters().get(0).isVariadic()).isTrue();
 
     functionSymbol = functionSymbol("def fn(p1, *args): pass");
     assertThat(functionSymbol.hasVariadicParameter()).isTrue();
