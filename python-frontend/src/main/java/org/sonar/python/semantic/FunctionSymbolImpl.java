@@ -140,6 +140,15 @@ public class FunctionSymbolImpl extends SymbolImpl implements FunctionSymbol {
     ParameterState parameterState = new ParameterState();
     for (AnyParameter anyParameter : parameterTrees) {
       if (anyParameter.is(Tree.Kind.PARAMETER)) {
+        org.sonar.plugins.python.api.tree.Parameter parameter = (org.sonar.plugins.python.api.tree.Parameter) anyParameter;
+        Token starToken = parameter.starToken();
+        if (starToken != null && "/".equals(starToken.value())) {
+          parameterState.positionalOnly = true;
+        }
+      }
+    }
+    for (AnyParameter anyParameter : parameterTrees) {
+      if (anyParameter.is(Tree.Kind.PARAMETER)) {
         addParameter((org.sonar.plugins.python.api.tree.Parameter) anyParameter, fileId, parameterState);
       } else {
         parameters.add(new ParameterImpl(null, InferredTypes.anyType(), false, parameterState, locationInFile(anyParameter, fileId)));
@@ -166,7 +175,7 @@ public class FunctionSymbolImpl extends SymbolImpl implements FunctionSymbol {
         parameterState.positionalOnly = false;
       }
       if ("/".equals(starToken.value())) {
-        parameterState.positionalOnly = true;
+        parameterState.positionalOnly = false;
       }
     }
   }
