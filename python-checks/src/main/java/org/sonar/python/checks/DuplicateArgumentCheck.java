@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import org.sonar.check.Rule;
@@ -130,10 +131,8 @@ public class DuplicateArgumentCheck extends PythonSubscriptionCheck {
   }
 
   private static void checkDictionary(UnpackingExpression unpackingExpression, Map<String, List<Tree>> passedParameters) {
-    List<String> dictionaryKeys = extractKeysFromDictionary(unpackingExpression);
-    for (String key : dictionaryKeys) {
-      passedParameters.computeIfAbsent(key, k -> new ArrayList<>()).add(unpackingExpression);
-    }
+    Set<String> dictionaryKeys = extractKeysFromDictionary(unpackingExpression);
+    dictionaryKeys.forEach(key -> passedParameters.computeIfAbsent(key, k -> new ArrayList<>()).add(unpackingExpression));
   }
 
   private static void reportIssues(Map<String, List<Tree>> passedParameters, FunctionSymbol functionSymbol, SubscriptionContext ctx) {
@@ -149,7 +148,7 @@ public class DuplicateArgumentCheck extends PythonSubscriptionCheck {
     });
   }
 
-  private static List<String> extractKeysFromDictionary(UnpackingExpression unpackingExpression) {
+  private static Set<String> extractKeysFromDictionary(UnpackingExpression unpackingExpression) {
     if (unpackingExpression.expression().is(Tree.Kind.DICTIONARY_LITERAL)) {
       return keysInDictionaryLiteral((DictionaryLiteral) unpackingExpression.expression());
     } else if (unpackingExpression.expression().is(Tree.Kind.CALL_EXPR)) {
@@ -158,35 +157,35 @@ public class DuplicateArgumentCheck extends PythonSubscriptionCheck {
       Name name = (Name) unpackingExpression.expression();
       Symbol symbol = name.symbol();
       if (symbol == null || symbol.usages().stream().anyMatch(u -> TreeUtils.firstAncestorOfKind(u.tree(), Tree.Kind.DEL_STMT) != null)) {
-        return Collections.emptyList();
+        return Collections.emptySet();
       }
       Expression expression = Expressions.singleAssignedValue(name);
       if (expression != null && expression.is(Tree.Kind.CALL_EXPR)) {
         return keysFromDictionaryCreation((CallExpression) expression);
       }
-      return expression != null && expression.is(Tree.Kind.DICTIONARY_LITERAL) ? keysInDictionaryLiteral((DictionaryLiteral) expression) : Collections.emptyList();
+      return expression != null && expression.is(Tree.Kind.DICTIONARY_LITERAL) ? keysInDictionaryLiteral((DictionaryLiteral) expression) : Collections.emptySet();
     }
-    return Collections.emptyList();
+    return Collections.emptySet();
   }
 
-  private static List<String> keysFromDictionaryCreation(CallExpression callExpression) {
+  private static Set<String> keysFromDictionaryCreation(CallExpression callExpression) {
     Symbol calleeSymbol = callExpression.calleeSymbol();
     if (calleeSymbol != null && "dict".equals(calleeSymbol.fullyQualifiedName())) {
       return callExpression.arguments().stream()
         .filter(a -> a.is(Tree.Kind.REGULAR_ARGUMENT) && ((RegularArgument) a).keywordArgument() != null)
         .map(a -> ((RegularArgument) a).keywordArgument().name())
-        .collect(Collectors.toList());
+        .collect(Collectors.toSet());
     }
-    return Collections.emptyList();
+    return Collections.emptySet();
   }
 
-  private static List<String> keysInDictionaryLiteral(DictionaryLiteral dictionaryLiteral) {
+  private static Set<String> keysInDictionaryLiteral(DictionaryLiteral dictionaryLiteral) {
     return dictionaryLiteral.elements().stream()
       .filter(e -> e.is(Tree.Kind.KEY_VALUE_PAIR))
       .map(kv -> ((KeyValuePair) kv).key())
       .filter(k -> k.is(Tree.Kind.STRING_LITERAL))
       .map(s -> ((StringLiteral) s).trimmedQuotesValue())
-      .collect(Collectors.toList());
+      .collect(Collectors.toSet());
   }
 
   private static boolean isException(FunctionSymbol functionSymbol) {

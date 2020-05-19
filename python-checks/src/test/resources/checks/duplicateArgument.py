@@ -19,6 +19,7 @@ def dict_literals():
   func(6, 93, 31, **params)  # Noncompliant
   func(6, 93, c=62, **params)  # Noncompliant
   func(6, 93, c=62, **{'c': 31})  # Noncompliant
+  func(6, 93, **{'c': 31, 'c': 32})  # S5780 scope: the resulting dictionary only has 1 element per key
 
   c = "not c"
   dict_key_not_literal = {c : 1}
